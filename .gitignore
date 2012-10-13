@@ -1,0 +1,7 @@
+.vegas
+.DS_Store
+*.rdb
+*.swp
+*.iml
+*.idea
+pics/*
