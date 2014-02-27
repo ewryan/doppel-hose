@@ -1,32 +1,21 @@
-require 'rubygems'
-require 'bundler'
-require 'curb'
-require 'json'
-require 'awesome_print'
-require 'resque'
+require 'bundler/setup'
+require 'twitter'
 
-module DoppelHose
-  def self.ingest url, username, password
-    Curl::Easy.http_get url do |c|
-      c.http_auth_types = :basic
-      c.username = username
-      c.password = password
+class DoppelHose
+  def self.ingest consumer_key, consumer_secret, access_token, access_token_secret
 
-      c.encoding = "gzip"
-      c.verbose = true
+		client = Twitter::Streaming::Client.new do |config|
+			config.consumer_key        = consumer_key
+			config.consumer_secret     = consumer_secret
+			config.access_token        = access_token
+			config.access_token_secret = access_token_secret
+		end
 
-      c.on_body do |data|
-        tweet = JSON.parse data
-
-        entities = tweet["entities"]
-        media = entities["media"] if entities
-        media1 = media[0] if media
-        media_url = media1["media_url_https"] if media1
-
-        Resque.enqueue(IngestWorker, media_url, username) if media_url
-
-        data.size # required by curl's api.
-      end
-    end
+		client.sample do |object|
+			if object.is_a?(Twitter::Tweet) && object.media?
+				uri = object.media.first.media_uri_https.to_s
+				Resque.enqueue(IngestWorker, uri, consumer_key) if uri
+			end
+		end
   end
 end
