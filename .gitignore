@@ -6,3 +6,4 @@
 *.idea
 pics/*
 config.yml
+tmp
